@@ -25,6 +25,11 @@
 }
 
 - (void)redisClient:(IORedis *)client didConnectToHost:(NSString *)host port:(uint16_t)port {
+    [client executeCommand:@"SET" parameters:@[@"foo", @"bar"] stringEncoding:NSUTF8StringEncoding success:^(id result) {
+        NSLog(@"%@", result);
+    } failure:^(NSError *error) {
+        NSLog(@"%@", error);
+    }];
     [client executeCommand:@"GET" parameters:@[@"foo"] stringEncoding:NSUTF8StringEncoding success:^(id result) {
         NSLog(@"%@", result);
     } failure:^(NSError *error) {

@@ -162,7 +162,9 @@ static NSData *kCRLFData;
             offset = newOffset + kCRLFData.length;
         }
     }
-    if (offset >= _readBuffer.length) {
+    
+    if (offset == 0) {
+    } else if (offset >= _readBuffer.length) {
         NSAssert(offset == _readBuffer.length, @"");
         _readBuffer = nil;
     } else {
@@ -170,7 +172,7 @@ static NSData *kCRLFData;
     }
     
     id result;
-    do {
+    while (_lines.count > 0 && [self testBufferResultCompleted]) {
         IORedisOperation *operation = _operationQueue.firstObject;
         result = [self readBufferResultWithStringEncoding:operation.stringEncoding];
         if (result) {
@@ -181,9 +183,59 @@ static NSData *kCRLFData;
             }
             [_operationQueue removeObjectAtIndex:0];
         }
-    } while (result && _lines.count > 0);
+    }
     
     [_socket readDataWithTimeout:-1 tag:0];
+}
+
+- (BOOL)testBufferResultCompleted {
+    NSInteger lineIndex = 0;
+    return [self testBufferResultCompletedWithLines:_lines lineIndex:&lineIndex];
+}
+
+- (BOOL)testBufferResultCompletedWithLines:(NSArray *)lines lineIndex:(NSInteger *)lineIndex {
+    if ( *lineIndex >= lines.count) return NO;
+    NSData *first = lines[*lineIndex];
+    const char *bytes = first.bytes;
+    
+    (*lineIndex)++;
+    
+    switch (bytes[0]) {
+        case '+': return YES;
+        case '-': return YES;
+        case ':': return YES;
+        case '$': {
+            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
+            NSString *str = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
+            long long length = [str longLongValue];
+            
+            if (length == -1) return YES;
+            
+            if ( *lineIndex >= lines.count) return NO;
+            (*lineIndex)++;
+            
+            return YES;
+        }
+        case '*': {
+            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
+            NSString *str = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
+            long long length = [str longLongValue];
+            
+            if (length == -1) return YES;
+            
+            for (int i = 0; i < length; i++) {
+                BOOL result = [self testBufferResultCompletedWithLines:lines lineIndex:lineIndex];
+                if (!result) return NO;
+            }
+            
+            return YES;
+        }
+        default: {
+            NSLog(@"Unknown line: %@", first);
+            return NO;
+        }
+    }
+
 }
 
 - (id)readBufferResultWithStringEncoding:(NSStringEncoding)stringEncoding{
@@ -240,8 +292,6 @@ static NSData *kCRLFData;
             if ( *lineIndex >= lines.count) return nil;
             NSData *second = lines[*lineIndex];
             (*lineIndex)++;
-
-            if (second.length != length)  return nil;
             
             if (stringEncoding == 0) {
                 return second;
@@ -249,6 +299,7 @@ static NSData *kCRLFData;
                 return [[NSString alloc] initWithData:second encoding:stringEncoding];
             }
         }
+            break;
         case '*': {
             NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
             NSString *str = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
@@ -267,7 +318,7 @@ static NSData *kCRLFData;
             
             return array;
         }
-            
+            break;
         default: {
             NSLog(@"Unknown line: %@", first);
             return nil;
