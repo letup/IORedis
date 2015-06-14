@@ -58,7 +58,7 @@
 }
 
 - (void)redisClientDidDisconnect:(IORedis *)client withError:(NSError *)err {
-    
+    NSLog(@"Disconnect with error: %@", err);
 }
 
 

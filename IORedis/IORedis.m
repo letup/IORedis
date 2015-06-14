@@ -8,6 +8,9 @@
 
 #import "IORedis.h"
 #import "GCDAsyncSocket.h"
+#import "ResponseBinaryParser.h"
+#import "RequestBinaryParser.h"
+#import "Utilites.h"
 
 NSString * const IORedisServerErrorDomain = @"IORedisServerErrorDomain";
 NSString * const IORedisServerErrorMessageKey = @"IORedisServerErrorMessageKey";
@@ -30,11 +33,6 @@ NSString * const IORedisServerErrorMessageKey = @"IORedisServerErrorMessageKey";
     NSMutableData *_readBuffer;
     
     NSMutableArray *_lines;
-}
-
-static NSData *kCRLFData;
-+ (void)load {
-    kCRLFData = [NSData dataWithBytes:"\r\n" length:2];
 }
 
 - (instancetype)init {
@@ -78,11 +76,7 @@ static NSData *kCRLFData;
         
         NSMutableArray *bulk = [NSMutableArray arrayWithObject:[command dataUsingEncoding:NSASCIIStringEncoding]];
         [bulk addObjectsFromArray:parameters];
-
-        NSMutableData *data = [NSMutableData data];
-        NSArray *lines = [self parameterDataWithObject:bulk stringEncoding:stringEncoding];
-        
-        [self buildDataFromArray:lines mutableData:data];
+        NSData *data = PasreRequestArray(bulk, stringEncoding);
         
         [_socket writeData:data withTimeout:60 tag:1];
         
@@ -95,54 +89,6 @@ static NSData *kCRLFData;
     });
 }
 
-- (NSArray *)parameterDataWithObject:(id)obj stringEncoding:(NSStringEncoding)stringEncoding{
-    if ([obj isKindOfClass:[NSData class]]) {
-        NSData *lengthData = [[NSString stringWithFormat:@"$%lu", (unsigned long)[obj length]] dataUsingEncoding:NSASCIIStringEncoding];
-        return @[lengthData, obj];
-    } else if ([obj isKindOfClass:[NSNumber class]]) {
-        NSString *str = [NSString stringWithFormat:@":%lld", [(NSNumber *)obj longLongValue]];
-        NSData *data = [str dataUsingEncoding:NSASCIIStringEncoding];
-        
-        return @[data];
-    } else if (obj == [NSNull null]) {
-        return @[[@"$-1" dataUsingEncoding:NSASCIIStringEncoding]];
-    } else if ([obj isKindOfClass:[NSString class]]) {
-        if (stringEncoding == 0) {
-            [NSException raise:NSInternalInconsistencyException
-                        format:@"NSString in parameters but string encoding disabled"];
-            return nil;
-        } else {
-            NSData *data = [(NSString *)obj dataUsingEncoding:stringEncoding];
-            NSData *lengthData = [[NSString stringWithFormat:@"$%lu", (unsigned long)data.length] dataUsingEncoding:NSASCIIStringEncoding];
-            
-            return @[lengthData, data];
-        }
-    } else if ([obj isKindOfClass:[NSArray class]]) {
-        NSMutableArray *array = [NSMutableArray array];
-        [array addObject:[[NSString stringWithFormat:@"*%lu", (unsigned long)[obj count]] dataUsingEncoding:NSASCIIStringEncoding]];
-        
-        for (id subobj in obj) {
-            [array addObject:[self parameterDataWithObject:subobj stringEncoding:stringEncoding]];
-        }
-        return array;
-    }
-    
-    [NSException raise:NSInternalInconsistencyException
-                format:@"Unknown parameters type found: %@", NSStringFromClass([obj class])];
-    return nil;
-}
-
-- (void)buildDataFromArray:(NSArray *)array mutableData:(NSMutableData *)data {
-    for (id obj in array) {
-        if ([obj isKindOfClass:[NSData class]]) {
-            [data appendData:obj];
-            [data appendData:kCRLFData];
-        } else {
-            [self buildDataFromArray:obj mutableData:data];
-        }
-    }
-}
-
 - (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag {
     if (!_readBuffer) {
         _readBuffer = [NSMutableData data];
@@ -151,7 +97,7 @@ static NSData *kCRLFData;
     
     NSUInteger offset = 0;
     while (offset < _readBuffer.length) {
-        NSUInteger newOffset = [_readBuffer rangeOfData:kCRLFData
+        NSUInteger newOffset = [_readBuffer rangeOfData:[Utilites CRLFData]
                                                 options:0
                                                   range:NSMakeRange(offset, _readBuffer.length - offset)].location;
         
@@ -159,7 +105,7 @@ static NSData *kCRLFData;
             break;
         } else {
             [_lines addObject:[_readBuffer subdataWithRange:NSMakeRange(offset, newOffset - offset)]];
-            offset = newOffset + kCRLFData.length;
+            offset = newOffset + [Utilites CRLFData].length;
         }
     }
     
@@ -172,9 +118,9 @@ static NSData *kCRLFData;
     }
     
     id result;
-    while (_lines.count > 0 && [self testBufferResultCompleted]) {
+    while (_lines.count > 0 && IsResponseBinaryCompleted(_lines)) {
         IORedisOperation *operation = _operationQueue.firstObject;
-        result = [self readBufferResultWithStringEncoding:operation.stringEncoding];
+        result = ParseResponseBinary(_lines, operation.stringEncoding);
         if (result) {
             if ([result isKindOfClass:[NSError class]]) {
                 operation.failure(result);
@@ -186,145 +132,6 @@ static NSData *kCRLFData;
     }
     
     [_socket readDataWithTimeout:-1 tag:0];
-}
-
-- (BOOL)testBufferResultCompleted {
-    NSInteger lineIndex = 0;
-    return [self testBufferResultCompletedWithLines:_lines lineIndex:&lineIndex];
-}
-
-- (BOOL)testBufferResultCompletedWithLines:(NSArray *)lines lineIndex:(NSInteger *)lineIndex {
-    if ( *lineIndex >= lines.count) return NO;
-    NSData *first = lines[*lineIndex];
-    const char *bytes = first.bytes;
-    
-    (*lineIndex)++;
-    
-    switch (bytes[0]) {
-        case '+': return YES;
-        case '-': return YES;
-        case ':': return YES;
-        case '$': {
-            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
-            NSString *str = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
-            long long length = [str longLongValue];
-            
-            if (length == -1) return YES;
-            
-            if ( *lineIndex >= lines.count) return NO;
-            (*lineIndex)++;
-            
-            return YES;
-        }
-        case '*': {
-            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
-            NSString *str = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
-            long long length = [str longLongValue];
-            
-            if (length == -1) return YES;
-            
-            for (int i = 0; i < length; i++) {
-                BOOL result = [self testBufferResultCompletedWithLines:lines lineIndex:lineIndex];
-                if (!result) return NO;
-            }
-            
-            return YES;
-        }
-        default: {
-            NSLog(@"Unknown line: %@", first);
-            return NO;
-        }
-    }
-
-}
-
-- (id)readBufferResultWithStringEncoding:(NSStringEncoding)stringEncoding{
-    NSInteger lineIndex = 0;
-    id result = [self parseResultWithLines:_lines lineIndex:&lineIndex stringEncoding:stringEncoding];
-    
-    if (result) {
-        [_lines removeObjectsInRange:NSMakeRange(0, lineIndex)];
-    }
-    
-    return result;
-}
-
-- (id)parseResultWithLines:(NSArray *)lines lineIndex:(NSInteger *)lineIndex stringEncoding:(NSStringEncoding)stringEncoding{
-    if ( *lineIndex >= lines.count) return nil;
-    NSData *first = lines[*lineIndex];
-    const char *bytes = first.bytes;
-    
-    (*lineIndex)++;
-    
-    switch (bytes[0]) {
-        case '+': {
-            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
-            if (stringEncoding == 0) {
-                return data;
-            } else {
-                return [[NSString alloc] initWithData:data encoding:stringEncoding];
-            }
-        }
-            break;
-        case '-': {
-            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
-            
-            NSError *error = [NSError errorWithDomain:IORedisServerErrorDomain
-                                                 code:0
-                                             userInfo:@{IORedisServerErrorMessageKey: [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding]}];
-            
-            return error;
-        }
-            break;
-        case ':': {
-            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
-            NSString *str = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
-            return [NSNumber numberWithInteger:str.integerValue];
-        }
-            break;
-        case '$': {
-            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
-            NSString *str = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
-            long long length = [str longLongValue];
-            
-            if (length == -1) return [NSNull null];
-            
-            if ( *lineIndex >= lines.count) return nil;
-            NSData *second = lines[*lineIndex];
-            (*lineIndex)++;
-            
-            if (stringEncoding == 0) {
-                return second;
-            } else {
-                return [[NSString alloc] initWithData:second encoding:stringEncoding];
-            }
-        }
-            break;
-        case '*': {
-            NSData *data = [first subdataWithRange:NSMakeRange(1, first.length - 1)];
-            NSString *str = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
-            long long length = [str longLongValue];
-            
-            if (length == -1) return [NSNull null];
-
-            NSMutableArray *array = [NSMutableArray arrayWithCapacity:length];
-            for (int i = 0; i < length; i++) {
-                id result = [self parseResultWithLines:lines lineIndex:lineIndex stringEncoding:stringEncoding];
-                if (!result) {
-                    return nil;
-                }
-                [array addObject:result];
-            }
-            
-            return array;
-        }
-            break;
-        default: {
-            NSLog(@"Unknown line: %@", first);
-            return nil;
-        }
-            break;
-    }
 }
 
 - (void)executeCommand:(NSString *)command

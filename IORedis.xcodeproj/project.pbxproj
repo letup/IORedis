@@ -9,6 +9,15 @@
 /* Begin PBXBuildFile section */
 		4648ECC71B2B1FE700144996 /* IORedis.h in Headers */ = {isa = PBXBuildFile; fileRef = 4648ECC61B2B1FE700144996 /* IORedis.h */; };
 		4648ECC91B2B1FE700144996 /* IORedis.m in Sources */ = {isa = PBXBuildFile; fileRef = 4648ECC81B2B1FE700144996 /* IORedis.m */; };
+		464C136F1B2D325D006B65C9 /* ResponseBinaryParser.h in Headers */ = {isa = PBXBuildFile; fileRef = 464C136D1B2D325D006B65C9 /* ResponseBinaryParser.h */; };
+		464C13701B2D325D006B65C9 /* ResponseBinaryParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 464C136E1B2D325D006B65C9 /* ResponseBinaryParser.m */; };
+		464C13711B2D3262006B65C9 /* ResponseBinaryParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 464C136E1B2D325D006B65C9 /* ResponseBinaryParser.m */; };
+		464C13741B2D351F006B65C9 /* RequestBinaryParser.h in Headers */ = {isa = PBXBuildFile; fileRef = 464C13721B2D351F006B65C9 /* RequestBinaryParser.h */; };
+		464C13751B2D351F006B65C9 /* RequestBinaryParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 464C13731B2D351F006B65C9 /* RequestBinaryParser.m */; };
+		464C13761B2D351F006B65C9 /* RequestBinaryParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 464C13731B2D351F006B65C9 /* RequestBinaryParser.m */; };
+		4651A42F1B2D36AA0017F978 /* Utilites.h in Headers */ = {isa = PBXBuildFile; fileRef = 4651A42D1B2D36AA0017F978 /* Utilites.h */; };
+		4651A4301B2D36AA0017F978 /* Utilites.m in Sources */ = {isa = PBXBuildFile; fileRef = 4651A42E1B2D36AA0017F978 /* Utilites.m */; };
+		4651A4311B2D36AA0017F978 /* Utilites.m in Sources */ = {isa = PBXBuildFile; fileRef = 4651A42E1B2D36AA0017F978 /* Utilites.m */; };
 		465E55681B2BDA0F00795304 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 465E55641B2BDA0F00795304 /* GCDAsyncSocket.h */; };
 		465E55691B2BDA0F00795304 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 465E55651B2BDA0F00795304 /* GCDAsyncSocket.m */; };
 		4685E2961B2BF44F00B62212 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4685E2951B2BF44F00B62212 /* AppDelegate.m */; };
@@ -23,6 +32,12 @@
 		4648ECC31B2B1FE700144996 /* libIORedis.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libIORedis.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		4648ECC61B2B1FE700144996 /* IORedis.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IORedis.h; sourceTree = "<group>"; };
 		4648ECC81B2B1FE700144996 /* IORedis.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = IORedis.m; sourceTree = "<group>"; };
+		464C136D1B2D325D006B65C9 /* ResponseBinaryParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResponseBinaryParser.h; sourceTree = "<group>"; };
+		464C136E1B2D325D006B65C9 /* ResponseBinaryParser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ResponseBinaryParser.m; sourceTree = "<group>"; };
+		464C13721B2D351F006B65C9 /* RequestBinaryParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RequestBinaryParser.h; sourceTree = "<group>"; };
+		464C13731B2D351F006B65C9 /* RequestBinaryParser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RequestBinaryParser.m; sourceTree = "<group>"; };
+		4651A42D1B2D36AA0017F978 /* Utilites.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Utilites.h; sourceTree = "<group>"; };
+		4651A42E1B2D36AA0017F978 /* Utilites.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Utilites.m; sourceTree = "<group>"; };
 		465E55641B2BDA0F00795304 /* GCDAsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GCDAsyncSocket.h; sourceTree = "<group>"; };
 		465E55651B2BDA0F00795304 /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GCDAsyncSocket.m; sourceTree = "<group>"; };
 		4685E2901B2BF44F00B62212 /* IORedis Test.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "IORedis Test.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -74,10 +89,24 @@
 		4648ECC51B2B1FE700144996 /* IORedis */ = {
 			isa = PBXGroup;
 			children = (
+				4651A4321B2D37020017F978 /* Parser */,
 				4648ECC61B2B1FE700144996 /* IORedis.h */,
 				4648ECC81B2B1FE700144996 /* IORedis.m */,
+				4651A42D1B2D36AA0017F978 /* Utilites.h */,
+				4651A42E1B2D36AA0017F978 /* Utilites.m */,
 			);
 			path = IORedis;
+			sourceTree = "<group>";
+		};
+		4651A4321B2D37020017F978 /* Parser */ = {
+			isa = PBXGroup;
+			children = (
+				464C136D1B2D325D006B65C9 /* ResponseBinaryParser.h */,
+				464C136E1B2D325D006B65C9 /* ResponseBinaryParser.m */,
+				464C13721B2D351F006B65C9 /* RequestBinaryParser.h */,
+				464C13731B2D351F006B65C9 /* RequestBinaryParser.m */,
+			);
+			name = Parser;
 			sourceTree = "<group>";
 		};
 		465E55621B2BDA0F00795304 /* Vendor */ = {
@@ -127,6 +156,9 @@
 			files = (
 				4648ECC71B2B1FE700144996 /* IORedis.h in Headers */,
 				465E55681B2BDA0F00795304 /* GCDAsyncSocket.h in Headers */,
+				4651A42F1B2D36AA0017F978 /* Utilites.h in Headers */,
+				464C13741B2D351F006B65C9 /* RequestBinaryParser.h in Headers */,
+				464C136F1B2D325D006B65C9 /* ResponseBinaryParser.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -220,8 +252,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				464C13701B2D325D006B65C9 /* ResponseBinaryParser.m in Sources */,
 				465E55691B2BDA0F00795304 /* GCDAsyncSocket.m in Sources */,
+				4651A4301B2D36AA0017F978 /* Utilites.m in Sources */,
 				4648ECC91B2B1FE700144996 /* IORedis.m in Sources */,
+				464C13751B2D351F006B65C9 /* RequestBinaryParser.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -230,8 +265,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				4685E2B31B2BF71F00B62212 /* GCDAsyncSocket.m in Sources */,
+				4651A4311B2D36AA0017F978 /* Utilites.m in Sources */,
+				464C13761B2D351F006B65C9 /* RequestBinaryParser.m in Sources */,
 				4685E2981B2BF44F00B62212 /* main.m in Sources */,
 				4685E2B21B2BF71100B62212 /* IORedis.m in Sources */,
+				464C13711B2D3262006B65C9 /* ResponseBinaryParser.m in Sources */,
 				4685E2961B2BF44F00B62212 /* AppDelegate.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
